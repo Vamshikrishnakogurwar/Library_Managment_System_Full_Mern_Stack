@@ -2,9 +2,13 @@
 setlocal enabledelayedexpansion
 title LibraFlow - Smart Library Management and Circulation System
 
+:: Force working directory to be the exact folder containing this script
+cd /d "%~dp0"
+
 echo ==============================================================================
 echo        LibraFlow -- Smart Library Management and Circulation System
 echo ==============================================================================
+echo Project Directory: %CD%
 echo.
 
 :: 1. Check Node.js and npm
@@ -17,12 +21,11 @@ if %errorlevel% neq 0 (
 )
 
 :: 2. Check or create .env file from .env.example
-if not exist ".env" (
-    if exist ".env.example" (
+if not exist "%~dp0.env" (
+    if exist "%~dp0.env.example" (
         echo [INFO] Creating .env file from .env.example...
-        copy /Y ".env.example" ".env" >nul
+        copy /Y "%~dp0.env.example" "%~dp0.env" >nul
         echo [NOTICE] Default .env created.
-        echo [NOTICE] If your MySQL password is not blank, edit .env to match your DB credentials.
         echo.
     ) else (
         echo [WARNING] Neither .env nor .env.example was found!
@@ -30,36 +33,34 @@ if not exist ".env" (
 )
 
 :: 3. Check and install dependencies if needed
-if not exist "node_modules\" (
+if not exist "%~dp0node_modules\" (
     echo [INFO] Installing root workspace dependencies...
+    cd /d "%~dp0"
     call npm install
 )
 
-if not exist "backend\node_modules\" (
+if not exist "%~dp0backend\node_modules\" (
     echo [INFO] Installing backend dependencies...
-    cd backend
+    cd /d "%~dp0backend"
     call npm install
-    cd ..
 )
 
-if not exist "frontend\node_modules\" (
+if not exist "%~dp0frontend\node_modules\" (
     echo [INFO] Installing frontend dependencies...
-    cd frontend
+    cd /d "%~dp0frontend"
     call npm install
-    cd ..
 )
 
 :: 4. Build frontend distribution if not already present
-if not exist "frontend\dist\" (
+if not exist "%~dp0frontend\dist\" (
     echo [INFO] Building production frontend assets...
-    cd frontend
+    cd /d "%~dp0frontend"
     call npm run build
-    cd ..
 )
 
-:: 5. Run Database Migrations safely
+:: 5. Run Database Migrations safely from backend directory
 echo [INFO] Checking and applying database migrations...
-cd backend
+cd /d "%~dp0backend"
 call node src/scripts/migrate.js
 if %errorlevel% neq 0 (
     echo.
@@ -68,7 +69,9 @@ if %errorlevel% neq 0 (
     echo Continuing to launch servers so you can access the interface...
     echo.
 )
-cd ..
+
+:: Return to repository root directory
+cd /d "%~dp0"
 
 :: 6. Launch both Backend and Frontend together
 echo.
@@ -82,7 +85,8 @@ echo ===========================================================================
 echo Press Ctrl+C at any time to stop both servers.
 echo.
 
-:: Launch the default concurrent development script
+:: Launch the default concurrent development script from repository root
+cd /d "%~dp0"
 call npm run dev
 
 pause
