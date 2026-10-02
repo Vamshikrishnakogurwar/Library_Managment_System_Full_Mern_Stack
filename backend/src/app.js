@@ -3,6 +3,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
+import fs from 'fs';
 import { config } from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { testConnection } from './config/database.js';
@@ -18,7 +20,7 @@ export function createApp() {
   const app = express();
 
   // Security & Utility Middleware
-  app.use(helmet());
+  app.use(helmet({ contentSecurityPolicy: false }));
   app.use(cors({
     origin: config.corsOrigin,
     credentials: true,
@@ -58,7 +60,22 @@ export function createApp() {
 
   app.use('/api/v1', apiV1);
 
-  // 404 Handler
+  // Serve production built frontend if available
+  const publicDistPath = path.resolve(process.cwd(), 'public');
+  const frontendDistPath = path.resolve(process.cwd(), '../frontend/dist');
+  const staticDir = fs.existsSync(publicDistPath) ? publicDistPath : (fs.existsSync(frontendDistPath) ? frontendDistPath : null);
+
+  if (staticDir) {
+    app.use(express.static(staticDir));
+    app.get('*', (req, res, next) => {
+      if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/health')) {
+        return next();
+      }
+      res.sendFile(path.join(staticDir, 'index.html'));
+    });
+  }
+
+  // 404 Handler for API
   app.use('*', (req, res) => {
     res.status(404).json({ success: false, error: `Endpoint not found: ${req.method} ${req.originalUrl}` });
   });

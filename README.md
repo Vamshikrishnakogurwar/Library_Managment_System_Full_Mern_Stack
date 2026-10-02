@@ -33,11 +33,20 @@ LibraFlow is a full-stack, enterprise-grade Library Management and Circulation S
 
 ## 🚀 Quick Start & Development Setup
 
+### ⚡ One-Click Startup (Windows)
+Simply double-click:
+```bat
+run.bat
+```
+This automatically verifies dependencies, initializes configuration, builds frontend bundles, applies database migrations, and launches both frontend and backend concurrently in one terminal.
+
+---
+
 ### 1. Prerequisites
 - **Node.js**: v20 or v22 LTS (`node -v`)
 - **MySQL**: Aiven Cloud MySQL or local MySQL 8.0+
 
-### 2. Clone and Configure Environment
+### 2. Manual Clone & Setup
 ```bash
 git clone https://github.com/Vamshikrishnakogurwar/Library_Managment_System_Full_Mern_Stack.git
 cd Library_Managment_System_Full_Mern_Stack

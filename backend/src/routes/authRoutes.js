@@ -11,13 +11,13 @@ const loginSchema = z.object({
 });
 
 const registerCustomerSchema = z.object({
-  username: z.string().min(3).max(50),
-  email: z.string().email(),
+  username: z.string().min(3, 'Username must be at least 3 characters').max(50),
+  email: z.string().email('Valid email address required'),
   password: z.string().min(8, 'Password must be at least 8 characters long'),
-  fullName: z.string().min(2),
-  phone: z.string().optional(),
-  address: z.string().optional(),
-  idProofNumber: z.string().optional(),
+  fullName: z.string().min(2, 'Full name is required'),
+  phone: z.string().optional().nullable().transform((v) => (v && v.trim() ? v.trim() : null)),
+  address: z.string().optional().nullable().transform((v) => (v && v.trim() ? v.trim() : null)),
+  idProofNumber: z.string().optional().nullable().transform((v) => (v && v.trim() ? v.trim() : null)),
   membershipTypeId: z.number().int().positive(),
 });
 

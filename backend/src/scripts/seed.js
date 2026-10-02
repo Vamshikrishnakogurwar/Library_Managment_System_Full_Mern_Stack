@@ -26,10 +26,13 @@ async function runSeed() {
     process.exit(1);
   }
 
-  const confirm = await ask('Are you sure you want to seed development sample data? (y/N): ');
-  if (confirm.toLowerCase() !== 'y') {
-    console.log('Seed aborted.');
-    process.exit(0);
+  const autoConfirm = process.env.AUTO_SEED === 'true' || process.argv.includes('--yes') || process.argv.includes('-y');
+  if (!autoConfirm) {
+    const confirm = await ask('Are you sure you want to seed development sample data? (y/N): ');
+    if (confirm.toLowerCase() !== 'y') {
+      console.log('Seed aborted.');
+      process.exit(0);
+    }
   }
 
   const pool = getDbPool();

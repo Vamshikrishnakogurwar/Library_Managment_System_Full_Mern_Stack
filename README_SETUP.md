@@ -4,6 +4,20 @@ This step-by-step tutorial guides 3rd-year B.Tech students through setting up Li
 
 ---
 
+## ⚡ Fastest Method: One-Click Runner (Windows)
+
+If you are on Windows, simply double-click **`run.bat`** in the repository root folder.
+
+It will automatically:
+1. Verify Node.js.
+2. Initialize `.env` from template if not present.
+3. Install dependencies across root, frontend, and backend.
+4. Build frontend distribution bundles.
+5. Check and run database migrations.
+6. Launch both frontend and backend concurrently in one terminal.
+
+---
+
 ## 1. System Prerequisites
 
 Verify your installed development tools in terminal:

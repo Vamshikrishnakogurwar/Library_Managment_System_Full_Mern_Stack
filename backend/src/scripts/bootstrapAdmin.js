@@ -44,10 +44,13 @@ async function bootstrap() {
   const pool = getDbPool();
 
   try {
-    // Check if an admin already exists
     const [existing] = await pool.query("SELECT id, username, email FROM users WHERE role = 'ADMIN' LIMIT 1");
     if (existing.length > 0) {
-      console.warn(`⚠️ An ADMIN user already exists: ${existing[0].username} (${existing[0].email})`);
+      console.log(`ℹ️ An ADMIN user already exists: ${existing[0].username} (${existing[0].email})`);
+      if (process.env.ADMIN_BOOTSTRAP_USERNAME || process.argv.includes('--skip-existing')) {
+        console.log('Skipping additional admin creation.');
+        process.exit(0);
+      }
       const proceed = await ask('Do you wish to create an additional ADMIN user? (y/N): ');
       if (proceed.toLowerCase() !== 'y') {
         console.log('Operation aborted.');
