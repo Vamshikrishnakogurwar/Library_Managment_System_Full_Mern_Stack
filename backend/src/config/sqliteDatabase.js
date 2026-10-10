@@ -317,13 +317,158 @@ function initSqliteSchema(db) {
   }
 
   // Ensure initial admin user exists
-  const adminRow = db.prepare("SELECT id FROM users WHERE role = 'ADMIN' LIMIT 1").get();
+  let adminUserId = null;
+  const adminRow = db.prepare("SELECT id FROM users WHERE username = 'admin'").get();
   if (!adminRow) {
     const saltRounds = 10;
     const defaultHash = bcrypt.hashSync('Password123!', saltRounds);
-    db.prepare(`
+    const info = db.prepare(`
       INSERT INTO users (username, email, password_hash, full_name, role, status, phone)
       VALUES ('admin', 'admin@libraflow.org', ?, 'System Administrator', 'ADMIN', 'ACTIVE', '+91 9876543210')
     `).run(defaultHash);
+    adminUserId = Number(info.lastInsertRowid);
+  } else {
+    adminUserId = adminRow.id;
+  }
+
+  // Ensure Admin Customer Profile exists
+  const adminCust = db.prepare("SELECT id FROM customers WHERE user_id = ?").get(adminUserId);
+  if (!adminCust) {
+    db.prepare(`
+      INSERT INTO customers (user_id, customer_code, membership_type_id, address, id_proof_number, membership_start_date, membership_expiry_date, is_suspended, notes)
+      VALUES (?, 'CUST-ADMIN-00001', 1, 'Library Operations HQ, Tech Campus', 'GOVT-ADMIN-01', '2026-01-01', '2030-01-01', 0, 'System Administrator Profile')
+    `).run(adminUserId);
+  }
+
+  // Ensure initial student / customer exists
+  let studentUserId = null;
+  const studentRow = db.prepare("SELECT id FROM users WHERE username = 'test_student'").get();
+  if (!studentRow) {
+    const saltRounds = 10;
+    const defaultHash = bcrypt.hashSync('Password123!', saltRounds);
+    const info = db.prepare(`
+      INSERT INTO users (username, email, password_hash, full_name, role, status, phone)
+      VALUES ('test_student', 'test_student@example.com', ?, 'Test Student', 'CUSTOMER', 'ACTIVE', '+91 9999999999')
+    `).run(defaultHash);
+    studentUserId = Number(info.lastInsertRowid);
+  } else {
+    studentUserId = studentRow.id;
+  }
+
+  const studentCust = db.prepare("SELECT id FROM customers WHERE user_id = ?").get(studentUserId);
+  if (!studentCust) {
+    db.prepare(`
+      INSERT INTO customers (user_id, customer_code, membership_type_id, address, id_proof_number, membership_start_date, membership_expiry_date, is_suspended, notes)
+      VALUES (?, 'CUST-2026-00002', 1, 'Hostel Block 4, Campus', 'STU-2026-001', '2026-01-01', '2028-01-01', 0, 'Standard Student Membership')
+    `).run(studentUserId);
+  }
+
+  // Ensure default books and physical copies exist
+  const countBooks = db.prepare('SELECT COUNT(*) as count FROM books').get();
+  if (countBooks.count === 0) {
+    const initialBooks = [
+      {
+        book_code: 'BK-CS101-DS',
+        isbn: '978-0131103627',
+        title: 'Data Structures and Algorithms in Java',
+        author: 'Robert Lafore',
+        publisher: 'Pearson Education',
+        edition: '2nd Edition',
+        language: 'English',
+        category_id: 1,
+        publication_year: 2021,
+        replacement_cost: 650.00,
+        discount_percentage: 15.00,
+        description: 'Fundamental guide to data structures, algorithm analysis, linked lists, trees, graphs, and Big-O computational complexity for IT students.',
+        cover_image_url: 'https://images.unsplash.com/photo-1532012164546-f432f2e37946?auto=format&fit=crop&q=80&w=400',
+        copies: 5,
+      },
+      {
+        book_code: 'BK-CS102-OS',
+        isbn: '978-1118063330',
+        title: 'Operating System Concepts',
+        author: 'Abraham Silberschatz, Peter B. Galvin',
+        publisher: 'Wiley Higher Education',
+        edition: '10th Edition',
+        language: 'English',
+        category_id: 1,
+        publication_year: 2020,
+        replacement_cost: 820.00,
+        discount_percentage: 20.00,
+        description: 'The definitive "dinosaur book" covering process management, virtual memory, concurrency, multi-threading, CPU scheduling, and file systems.',
+        cover_image_url: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=400',
+        copies: 4,
+      },
+      {
+        book_code: 'BK-CS103-DBMS',
+        isbn: '978-0078022159',
+        title: 'Database System Concepts & Relational Architecture',
+        author: 'Abraham Silberschatz, Henry F. Korth, S. Sudarshan',
+        publisher: 'McGraw-Hill Education',
+        edition: '7th Edition',
+        language: 'English',
+        category_id: 1,
+        publication_year: 2022,
+        replacement_cost: 750.00,
+        discount_percentage: 12.00,
+        description: 'In-depth study of relational databases, SQL queries, normalization, ACID transaction processing, indexing, and distributed storage systems.',
+        cover_image_url: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&q=80&w=400',
+        copies: 6,
+      },
+      {
+        book_code: 'BK-AI201-DL',
+        isbn: '978-0262035613',
+        title: 'Deep Learning with Python & PyTorch',
+        author: 'Ian Goodfellow, Yoshua Bengio, Aaron Courville',
+        publisher: 'MIT Press',
+        edition: '1st Edition',
+        language: 'English',
+        category_id: 2,
+        publication_year: 2023,
+        replacement_cost: 1100.00,
+        discount_percentage: 25.00,
+        description: 'Comprehensive mathematical grounding and hands-on neural network design, CNNs, RNNs, transformers, and generative modeling.',
+        cover_image_url: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80&w=400',
+        copies: 4,
+      },
+      {
+        book_code: 'BK-LIT502-ATOMIC',
+        isbn: '978-0735211292',
+        title: 'Atomic Habits: An Easy & Proven Way to Build Good Habits',
+        author: 'James Clear',
+        publisher: 'Avery / Penguin Random House',
+        edition: 'Hardcover Edition',
+        language: 'English',
+        category_id: 1,
+        publication_year: 2022,
+        replacement_cost: 499.00,
+        discount_percentage: 25.00,
+        description: 'No-nonsense framework for making tiny behavioral changes that yield extraordinary personal and professional results over time.',
+        cover_image_url: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=400',
+        copies: 5,
+      }
+    ];
+
+    const insertBook = db.prepare(`
+      INSERT INTO books (book_code, isbn, title, author, publisher, edition, language, category_id, publication_year, replacement_cost, discount_percentage, description, cover_image_url)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const insertCopy = db.prepare(`
+      INSERT INTO book_copies (book_id, copy_number, barcode, acquisition_date, acquisition_cost, status, \`condition\`, rack_location)
+      VALUES (?, ?, ?, '2026-01-01', ?, 'AVAILABLE', 'NEW', 'Section A - Stacks')
+    `);
+
+    for (const b of initialBooks) {
+      const bookRes = insertBook.run(
+        b.book_code, b.isbn, b.title, b.author, b.publisher, b.edition, b.language, b.category_id,
+        b.publication_year, b.replacement_cost, b.discount_percentage, b.description, b.cover_image_url
+      );
+      const bId = Number(bookRes.lastInsertRowid);
+      for (let i = 1; i <= b.copies; i++) {
+        const barcode = `BAR-${bId.toString().padStart(4, '0')}-${i.toString().padStart(3, '0')}`;
+        insertCopy.run(bId, i, barcode, b.replacement_cost);
+      }
+    }
   }
 }
