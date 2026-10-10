@@ -21,7 +21,11 @@ export function getSqliteDb() {
   }
 
   sqliteDb = new Database(dbPath);
-  sqliteDb.pragma('journal_mode = WAL');
+  if (!isServerless) {
+    sqliteDb.pragma('journal_mode = WAL');
+  } else {
+    sqliteDb.pragma('journal_mode = MEMORY');
+  }
   sqliteDb.pragma('foreign_keys = ON');
 
   initSqliteSchema(sqliteDb);
