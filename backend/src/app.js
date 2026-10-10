@@ -24,14 +24,17 @@ export function createApp() {
   const app = express();
 
   // Security & Utility Middleware
-  app.use(helmet({ contentSecurityPolicy: false }));
+  const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+  if (!isServerless) {
+    app.use(helmet({ contentSecurityPolicy: false }));
+    app.use(morgan(config.env === 'development' ? 'dev' : 'combined'));
+  }
   app.use(cors({
-    origin: config.corsOrigin,
+    origin: true,
     credentials: true,
   }));
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
-  app.use(morgan(config.env === 'development' ? 'dev' : 'combined'));
 
   // Rate Limiter on sensitive / auth routes
   const authLimiter = rateLimit({
