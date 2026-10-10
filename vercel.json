@@ -1,5 +1,7 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist",
+  "framework": "vite",
   "rewrites": [
     {
       "source": "/api/(.*)",
@@ -10,7 +12,7 @@
       "destination": "/api/index.js"
     },
     {
-      "source": "/((?!api/|health).*)",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]

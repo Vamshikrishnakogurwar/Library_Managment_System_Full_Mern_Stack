@@ -61,9 +61,14 @@ export function createApp() {
   app.use('/api/v1', apiV1);
 
   // Serve production built frontend if available
-  const publicDistPath = path.resolve(process.cwd(), 'public');
-  const frontendDistPath = path.resolve(process.cwd(), '../frontend/dist');
-  const staticDir = fs.existsSync(publicDistPath) ? publicDistPath : (fs.existsSync(frontendDistPath) ? frontendDistPath : null);
+  const candidates = [
+    path.resolve(process.cwd(), 'frontend/dist'),
+    path.resolve(process.cwd(), '../frontend/dist'),
+    path.resolve(process.cwd(), 'dist'),
+    path.resolve(process.cwd(), 'public'),
+    path.resolve(__dirname, '../../frontend/dist')
+  ];
+  const staticDir = candidates.find(dir => fs.existsSync(dir)) || null;
 
   if (staticDir) {
     app.use(express.static(staticDir));
