@@ -78,17 +78,21 @@ echo [INFO] Initializing and validating database schema...
 cd /d "%~dp0backend"
 call node src/scripts/migrate.js
 
+:: Ensure rich catalog and customer profiles are present
+call node src/scripts/seedMoreBooks.js
+
 :: Return to repository root directory
 cd /d "%~dp0"
 
 :: 6. Launch both Backend and Frontend together
 echo.
 echo ==============================================================================
-echo [SUCCESS] Starting LibraFlow Full Stack Services...
+echo [SUCCESS] Starting AuraLib Full Stack Services...
 echo ==============================================================================
 echo  - Frontend Web UI:  http://localhost:5173
 echo  - Backend REST API: http://localhost:5000/api/v1
 echo  - Health Check:     http://localhost:5000/health
+echo  - Administrator:    Username: admin ^| Password: Password123!
 echo ==============================================================================
 echo Press Ctrl+C at any time to stop both servers.
 echo.

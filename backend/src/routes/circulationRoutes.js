@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { CirculationService } from '../services/circulationService.js';
 import { authenticate, authorize } from '../middleware/auth.js';
+import { resolveCustomerProfileId } from '../utils/customerHelper.js';
 import { z } from 'zod';
 
 const router = Router();
@@ -33,19 +34,11 @@ router.get('/loans', authenticate, async (req, res, next) => {
 // Issue / Rent Book (Admin, Librarian, or self Customer)
 router.post('/issue', authenticate, async (req, res, next) => {
   try {
-    let targetCustomerId = req.body.customerId;
-
-    // If caller is CUSTOMER, they can only rent for themselves
+    let targetCustomerId;
     if (req.user.role === 'CUSTOMER') {
-      if (!req.user.customerProfileId) {
-        return res.status(400).json({ success: false, error: 'Customer account profile not linked.' });
-      }
-      targetCustomerId = req.user.customerProfileId;
+      targetCustomerId = await resolveCustomerProfileId(req.user);
     } else {
-      // Admin or Librarian must specify customerId
-      if (!targetCustomerId) {
-        return res.status(400).json({ success: false, error: 'Customer ID is required.' });
-      }
+      targetCustomerId = await resolveCustomerProfileId(req.user, req.body.customerId);
     }
 
     const schema = z.object({

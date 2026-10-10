@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { CatalogService } from '../services/catalogService.js';
 import { authenticate, authorize } from '../middleware/auth.js';
+import { resolveCustomerProfileId } from '../utils/customerHelper.js';
 import { z } from 'zod';
 import { getDbPool } from '../config/database.js';
 
@@ -166,15 +167,11 @@ router.post('/:id/stock', authenticate, authorize('ADMIN', 'LIBRARIAN'), async (
 // Purchase / Buy Book (Customer or Staff for Customer)
 router.post('/:id/purchase', authenticate, async (req, res, next) => {
   try {
-    let customerId = req.user.customerProfileId;
-    if (req.user.role === 'ADMIN' || req.user.role === 'LIBRARIAN') {
-      if (req.body.customerId) {
-        customerId = parseInt(req.body.customerId, 10);
-      }
-    }
-
-    if (!customerId) {
-      return res.status(400).json({ success: false, error: 'Customer profile required to purchase a book.' });
+    let customerId;
+    if (req.user.role === 'CUSTOMER') {
+      customerId = await resolveCustomerProfileId(req.user);
+    } else {
+      customerId = await resolveCustomerProfileId(req.user, req.body.customerId);
     }
 
     const schema = z.object({

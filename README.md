@@ -1,6 +1,17 @@
-# LibraFlow — Smart Library Management and Circulation System
+# AuraLib — Next-Gen Smart Library & Circulation Suite
 
-LibraFlow is a full-stack, enterprise-grade Library Management and Circulation System tailored for academic institutions, engineering colleges, and public libraries. Built with React (Vite & Tailwind CSS), Node.js (Express), and persistent Aiven Cloud MySQL with InnoDB ACID transactions.
+AuraLib (formerly LibraFlow) is a full-stack, enterprise-grade Library Management and Circulation System tailored for academic institutions, engineering colleges, and modern libraries. Built with React (Vite & Tailwind CSS), Node.js (Express), and resilient multi-engine database support (Aiven Cloud MySQL / InnoDB with zero-config ACID local fallback).
+
+---
+
+## 🔑 Default Administrator Login Credentials
+
+| Role | Username | Default Password | Access Scope |
+|---|---|---|---|
+| **Administrator** | `admin` | `Password123!` | Full control: Book stock, pricing, discount editor, customers, fine waivers, invoicing & loans |
+| **Test Student / Customer** | `test_student` | `Password123!` | Reader Portal: Borrow/rent books, buy books, loan history, fine payments & reservations |
+
+> **Security Note**: These default credentials are provisioned for academic demonstration and testing. You can change administrator and user passwords at any time in the portal.
 
 ---
 
