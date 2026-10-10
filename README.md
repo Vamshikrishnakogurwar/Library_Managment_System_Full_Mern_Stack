@@ -115,15 +115,44 @@ npm run build
 
 ---
 
-## 🐳 Docker Deployment
+---
 
-To launch the full stack with an optional isolated MySQL container:
+## ⚡ Deployment to Vercel (Step-by-Step)
+
+You can deploy the **AuraLib** frontend directly to [Vercel](https://vercel.com/) with zero configuration:
+
+### Method 1: Deploying via Vercel Web Dashboard (Recommended)
+
+1. **Push your repository** to your GitHub account:
+   ```bash
+   git push origin main
+   ```
+2. Go to **[vercel.com](https://vercel.com)** and log in with your GitHub account.
+3. Click **"Add New..."** > **"Project"**.
+4. Import your repository: **`Library_Managment_System_Full_Mern_Stack`**.
+5. Configure the Project Settings:
+   - **Framework Preset**: `Vite`
+   - **Root Directory**: Click `Edit` and select `frontend` (or leave as `./` since `vercel.json` is configured).
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+   - **Install Command**: `npm install`
+6. **Environment Variables** (Optional, if connecting to an external hosted backend API):
+   - `VITE_API_URL`: `https://your-backend-api.onrender.com` (or Railway / AWS / VPS endpoint)
+7. Click **"Deploy"**!
+   Your site will be live within 60 seconds with an SSL URL: `https://your-project.vercel.app`.
+
+### Method 2: Deploying via Vercel CLI
+
 ```bash
-npm run docker:up
-```
-To stop the containers:
-```bash
-npm run docker:down
+# 1. Install Vercel CLI globally
+npm install -g vercel
+
+# 2. Deploy from the frontend directory
+cd frontend
+vercel
+
+# 3. For production release:
+vercel --prod
 ```
 
 ---
