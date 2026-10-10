@@ -6,7 +6,9 @@ import bcrypt from 'bcrypt';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const dataDir = path.resolve(__dirname, '../../data');
+// In serverless environments like Vercel, the only writable directory is /tmp
+const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+const dataDir = isServerless ? '/tmp' : path.resolve(__dirname, '../../data');
 const dbPath = path.join(dataDir, 'libraflow.sqlite');
 
 let sqliteDb = null;
