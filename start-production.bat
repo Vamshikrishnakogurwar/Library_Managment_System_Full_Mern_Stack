@@ -17,6 +17,15 @@ if not exist "%~dp0.env" (
     )
 )
 
+:: Free up port 5000 if previously occupied
+echo [INFO] Ensuring port 5000 is free...
+for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| findstr ":5000" ^| findstr "LISTENING"') do (
+    if "%%a" neq "0" (
+        echo [INFO] Terminating previous process %%a occupying port 5000...
+        taskkill /F /PID %%a >nul 2>&1
+    )
+)
+
 echo [INFO] Ensuring production frontend is built...
 cd /d "%~dp0frontend"
 call npm run build

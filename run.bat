@@ -20,6 +20,21 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+:: Free up ports 5000 and 5173 if previously running in the background (prevents EADDRINUSE error)
+echo [INFO] Ensuring ports 5000 and 5173 are free...
+for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| findstr ":5000" ^| findstr "LISTENING"') do (
+    if "%%a" neq "0" (
+        echo [INFO] Terminating previous process %%a occupying port 5000...
+        taskkill /F /PID %%a >nul 2>&1
+    )
+)
+for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| findstr ":5173" ^| findstr "LISTENING"') do (
+    if "%%a" neq "0" (
+        echo [INFO] Terminating previous process %%a occupying port 5173...
+        taskkill /F /PID %%a >nul 2>&1
+    )
+)
+
 :: 2. Check or create .env file from .env.example
 if not exist "%~dp0.env" (
     if exist "%~dp0.env.example" (
