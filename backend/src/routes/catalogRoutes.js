@@ -117,4 +117,84 @@ router.patch('/copies/:copyId/status', authenticate, authorize('ADMIN', 'LIBRARI
   }
 });
 
+// Update Book (Admin & Librarian) - change price, discount, details
+router.put('/:id', authenticate, authorize('ADMIN', 'LIBRARIAN'), async (req, res, next) => {
+  try {
+    const schema = z.object({
+      title: z.string().optional(),
+      author: z.string().optional(),
+      publisher: z.string().optional().nullable(),
+      edition: z.string().optional().nullable(),
+      category_id: z.number().int().optional().nullable(),
+      publication_year: z.number().int().optional().nullable(),
+      replacement_cost: z.number().nonnegative().optional(),
+      discount_percentage: z.number().min(0).max(100).optional(),
+      description: z.string().optional().nullable(),
+      cover_image_url: z.string().optional().nullable(),
+    });
+
+    const validated = schema.parse(req.body);
+    const updated = await CatalogService.updateBook(req.params.id, validated, req.user.userId);
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Adjust Stock (Admin & Librarian) - add or remove copies
+router.post('/:id/stock', authenticate, authorize('ADMIN', 'LIBRARIAN'), async (req, res, next) => {
+  try {
+    const schema = z.object({
+      delta: z.number().int(),
+      rackLocation: z.string().default('General Stacks'),
+      notes: z.string().default('Stock Adjustment'),
+    });
+
+    const validated = schema.parse(req.body);
+    const result = await CatalogService.adjustStock(
+      req.params.id,
+      validated.delta,
+      { rackLocation: validated.rackLocation, notes: validated.notes },
+      req.user.userId
+    );
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Purchase / Buy Book (Customer or Staff for Customer)
+router.post('/:id/purchase', authenticate, async (req, res, next) => {
+  try {
+    let customerId = req.user.customerProfileId;
+    if (req.user.role === 'ADMIN' || req.user.role === 'LIBRARIAN') {
+      if (req.body.customerId) {
+        customerId = parseInt(req.body.customerId, 10);
+      }
+    }
+
+    if (!customerId) {
+      return res.status(400).json({ success: false, error: 'Customer profile required to purchase a book.' });
+    }
+
+    const schema = z.object({
+      paymentMethod: z.enum(['CASH', 'UPI', 'CARD', 'BANK_TRANSFER']).default('UPI'),
+      notes: z.string().optional().nullable(),
+    });
+
+    const validated = schema.parse(req.body);
+    const result = await CatalogService.purchaseBook({
+      customerId,
+      bookId: req.params.id,
+      actorUserId: req.user.userId,
+      paymentMethod: validated.paymentMethod,
+      notes: validated.notes,
+    });
+
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

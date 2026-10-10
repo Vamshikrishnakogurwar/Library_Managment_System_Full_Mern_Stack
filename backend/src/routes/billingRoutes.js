@@ -90,4 +90,56 @@ router.post('/fines/:fineId/waive', authenticate, authorize('ADMIN'), async (req
   }
 });
 
+// Create Custom Invoice / Fee with Discount (Admin & Librarian)
+router.post('/invoices', authenticate, authorize('ADMIN', 'LIBRARIAN'), async (req, res, next) => {
+  try {
+    const schema = z.object({
+      customerId: z.number().int().positive(),
+      description: z.string().min(1),
+      amount: z.number().positive(),
+      discountAmount: z.number().min(0).default(0),
+      chargeType: z.enum(['FINE', 'DAMAGE', 'MEMBERSHIP', 'PURCHASE', 'MISC']).default('MISC'),
+      dueDate: z.string().optional(),
+      notes: z.string().optional().nullable(),
+    });
+
+    const validated = schema.parse(req.body);
+    const { getDbPool } = await import('../config/database.js');
+    const pool = getDbPool();
+
+    const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`;
+    const today = new Date().toISOString().split('T')[0];
+    const subtotal = validated.amount;
+    const discount = validated.discountAmount || 0;
+    const totalAmount = Math.max(0, subtotal - discount);
+
+    const [invRes] = await pool.query(
+      `INSERT INTO invoices (invoice_number, customer_id, invoice_date, due_date, subtotal, discount_amount, total_amount, paid_amount, balance_amount, status, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 0.00, ?, 'ISSUED', ?)`,
+      [
+        invoiceNumber,
+        validated.customerId,
+        today,
+        validated.dueDate || today,
+        subtotal,
+        discount,
+        totalAmount,
+        totalAmount,
+        validated.notes || null,
+      ]
+    );
+
+    await pool.query(
+      `INSERT INTO invoice_items (invoice_id, description, charge_type, quantity, unit_amount, total_amount)
+       VALUES (?, ?, ?, 1, ?, ?)`,
+      [invRes.insertId, validated.description, validated.chargeType, subtotal, totalAmount]
+    );
+
+    const newInvoice = await BillingService.getInvoiceDetails(invRes.insertId);
+    res.status(201).json({ success: true, data: newInvoice });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

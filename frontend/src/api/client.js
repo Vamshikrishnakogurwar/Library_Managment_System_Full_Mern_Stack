@@ -41,6 +41,9 @@ export const api = {
   getCategories: () => apiRequest('/catalog/categories'),
   getBookById: (id) => apiRequest(`/catalog/${id}`),
   createBook: (bookData) => apiRequest('/catalog', { method: 'POST', body: JSON.stringify(bookData) }),
+  updateBook: (id, bookData) => apiRequest(`/catalog/${id}`, { method: 'PUT', body: JSON.stringify(bookData) }),
+  adjustStock: (id, stockData) => apiRequest(`/catalog/${id}/stock`, { method: 'POST', body: JSON.stringify(stockData) }),
+  purchaseBook: (id, purchaseData) => apiRequest(`/catalog/${id}/purchase`, { method: 'POST', body: JSON.stringify(purchaseData) }),
   addCopy: (bookId, copyData) => apiRequest(`/catalog/${bookId}/copies`, { method: 'POST', body: JSON.stringify(copyData) }),
   updateCopyStatus: (copyId, data) => apiRequest(`/catalog/copies/${copyId}/status`, { method: 'PATCH', body: JSON.stringify(data) }),
 
@@ -50,6 +53,7 @@ export const api = {
     return apiRequest(`/customers${query ? `?${query}` : ''}`);
   },
   getCustomerById: (id) => apiRequest(`/customers/${id}`),
+  updateCustomer: (id, data) => apiRequest(`/customers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   toggleSuspension: (id, isSuspended) => apiRequest(`/customers/${id}/suspend`, { method: 'PATCH', body: JSON.stringify({ isSuspended }) }),
 
   // Circulation
@@ -58,6 +62,7 @@ export const api = {
     return apiRequest(`/circulation/loans${query ? `?${query}` : ''}`);
   },
   issueBook: (data) => apiRequest('/circulation/issue', { method: 'POST', body: JSON.stringify(data) }),
+  updateLoan: (loanId, data) => apiRequest(`/circulation/loans/${loanId}`, { method: 'PATCH', body: JSON.stringify(data) }),
   previewReturn: (loanId) => apiRequest(`/circulation/return-preview/${loanId}`),
   returnBook: (data) => apiRequest('/circulation/return', { method: 'POST', body: JSON.stringify(data) }),
 
@@ -67,6 +72,7 @@ export const api = {
     return apiRequest(`/billing/invoices${query ? `?${query}` : ''}`);
   },
   getInvoiceDetails: (id) => apiRequest(`/billing/invoices/${id}`),
+  createInvoice: (data) => apiRequest('/billing/invoices', { method: 'POST', body: JSON.stringify(data) }),
   recordPayment: (paymentData) => apiRequest('/billing/payments', { method: 'POST', body: JSON.stringify(paymentData) }),
   waiveFine: (fineId, waiverData) => apiRequest(`/billing/fines/${fineId}/waive`, { method: 'POST', body: JSON.stringify(waiverData) }),
 

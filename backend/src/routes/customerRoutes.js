@@ -49,4 +49,57 @@ router.patch('/:id/suspend', authenticate, authorize('ADMIN'), async (req, res, 
   }
 });
 
+// Update Customer details (Admin & Librarian)
+router.put('/:id', authenticate, authorize('ADMIN', 'LIBRARIAN'), async (req, res, next) => {
+  try {
+    const schema = z.object({
+      fullName: z.string().optional(),
+      phone: z.string().optional().nullable(),
+      address: z.string().optional().nullable(),
+      idProofNumber: z.string().optional().nullable(),
+      membershipTypeId: z.number().int().optional(),
+      notes: z.string().optional().nullable(),
+    });
+
+    const validated = schema.parse(req.body);
+    const { getDbPool } = await import('../config/database.js');
+    const pool = getDbPool();
+
+    const [custRows] = await pool.query('SELECT user_id FROM customers WHERE id = ?', [req.params.id]);
+    if (custRows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Customer not found' });
+    }
+
+    const userId = custRows[0].user_id;
+
+    if (validated.fullName || validated.phone !== undefined) {
+      await pool.query(
+        'UPDATE users SET full_name = COALESCE(?, full_name), phone = COALESCE(?, phone) WHERE id = ?',
+        [validated.fullName || null, validated.phone !== undefined ? validated.phone : null, userId]
+      );
+    }
+
+    await pool.query(
+      `UPDATE customers SET
+        address = COALESCE(?, address),
+        id_proof_number = COALESCE(?, id_proof_number),
+        membership_type_id = COALESCE(?, membership_type_id),
+        notes = COALESCE(?, notes)
+       WHERE id = ?`,
+      [
+        validated.address !== undefined ? validated.address : null,
+        validated.idProofNumber !== undefined ? validated.idProofNumber : null,
+        validated.membershipTypeId || null,
+        validated.notes !== undefined ? validated.notes : null,
+        req.params.id,
+      ]
+    );
+
+    const updated = await CustomerService.getCustomerDetails(parseInt(req.params.id, 10));
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

@@ -90,8 +90,8 @@ export class CatalogService {
     const bookCode = data.book_code || `BK-${Date.now().toString(36).toUpperCase()}`;
 
     const [res] = await pool.query(
-      `INSERT INTO books (book_code, isbn, title, author, publisher, edition, language, category_id, publication_year, replacement_cost, description, cover_image_url)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO books (book_code, isbn, title, author, publisher, edition, language, category_id, publication_year, replacement_cost, discount_percentage, description, cover_image_url)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         bookCode,
         data.isbn || null,
@@ -103,6 +103,7 @@ export class CatalogService {
         data.category_id || null,
         data.publication_year || null,
         data.replacement_cost || 500.00,
+        data.discount_percentage || 0.00,
         data.description || null,
         data.cover_image_url || null,
       ]
@@ -204,5 +205,200 @@ export class CatalogService {
     });
 
     return { success: true };
+  }
+
+  static async updateBook(bookId, data, actorUserId) {
+    const pool = getDbPool();
+    const [existing] = await pool.query('SELECT * FROM books WHERE id = ?', [bookId]);
+    if (existing.length === 0) {
+      const err = new Error('Book not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    await pool.query(
+      `UPDATE books SET
+        title = COALESCE(?, title),
+        author = COALESCE(?, author),
+        publisher = COALESCE(?, publisher),
+        edition = COALESCE(?, edition),
+        category_id = COALESCE(?, category_id),
+        publication_year = COALESCE(?, publication_year),
+        replacement_cost = COALESCE(?, replacement_cost),
+        description = COALESCE(?, description),
+        cover_image_url = COALESCE(?, cover_image_url),
+        discount_percentage = COALESCE(?, discount_percentage)
+       WHERE id = ?`,
+      [
+        data.title || null,
+        data.author || null,
+        data.publisher || null,
+        data.edition || null,
+        data.category_id || null,
+        data.publication_year || null,
+        data.replacement_cost !== undefined ? data.replacement_cost : null,
+        data.description || null,
+        data.cover_image_url || null,
+        data.discount_percentage !== undefined ? data.discount_percentage : null,
+        bookId
+      ]
+    );
+
+    await logAudit({
+      userId: actorUserId,
+      action: 'BOOK_UPDATED',
+      entityType: 'BOOK',
+      entityId: bookId,
+      details: data,
+    });
+
+    return this.getBookById(bookId);
+  }
+
+  static async adjustStock(bookId, delta, { rackLocation = 'General Stacks', notes = 'Inventory Adjustment' }, actorUserId) {
+    const pool = getDbPool();
+    const num = parseInt(delta, 10);
+    if (isNaN(num) || num === 0) {
+      const err = new Error('Delta must be a non-zero integer');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (num > 0) {
+      for (let i = 0; i < num; i++) {
+        await this.addCopy(bookId, {
+          rack_location: rackLocation,
+          condition: 'GOOD',
+          notes: notes,
+        }, actorUserId);
+      }
+    } else {
+      const neededToRemove = Math.abs(num);
+      const [availableCopies] = await pool.query(
+        "SELECT id FROM book_copies WHERE book_id = ? AND status = 'AVAILABLE' ORDER BY id DESC LIMIT ?",
+        [bookId, neededToRemove]
+      );
+
+      if (availableCopies.length < neededToRemove) {
+        const err = new Error(`Cannot decrease stock by ${neededToRemove}: only ${availableCopies.length} copy(ies) are currently AVAILABLE.`);
+        err.statusCode = 400;
+        throw err;
+      }
+
+      for (const copy of availableCopies) {
+        await pool.query("UPDATE book_copies SET status = 'WITHDRAWN', notes = ? WHERE id = ?", [notes, copy.id]);
+      }
+
+      await logAudit({
+        userId: actorUserId,
+        action: 'STOCK_DECREASED',
+        entityType: 'BOOK',
+        entityId: bookId,
+        details: { count: neededToRemove, reason: notes },
+      });
+    }
+
+    return this.getBookById(bookId);
+  }
+
+  static async purchaseBook({ customerId, bookId, actorUserId, paymentMethod = 'CASH', notes }) {
+    const pool = getDbPool();
+    const [customers] = await pool.query('SELECT * FROM customers WHERE id = ?', [customerId]);
+    if (customers.length === 0) {
+      const err = new Error('Customer profile not found');
+      err.statusCode = 404;
+      throw err;
+    }
+    const customer = customers[0];
+
+    const [books] = await pool.query('SELECT * FROM books WHERE id = ?', [bookId]);
+    if (books.length === 0) {
+      const err = new Error('Book not found');
+      err.statusCode = 404;
+      throw err;
+    }
+    const book = books[0];
+
+    const [copies] = await pool.query(
+      "SELECT id, barcode FROM book_copies WHERE book_id = ? AND status = 'AVAILABLE' LIMIT 1",
+      [bookId]
+    );
+    if (copies.length === 0) {
+      const err = new Error('No copies available for purchase in stock.');
+      err.statusCode = 400;
+      throw err;
+    }
+    const copy = copies[0];
+
+    const price = parseFloat(book.replacement_cost) || 500.00;
+    const discountPct = parseFloat(book.discount_percentage) || 0;
+    const discountAmount = Number(((price * discountPct) / 100).toFixed(2));
+    const finalAmount = Number(Math.max(0, price - discountAmount).toFixed(2));
+
+    await pool.query("UPDATE book_copies SET status = 'WITHDRAWN', notes = ? WHERE id = ?", [
+      `Sold to Customer ID ${customerId} (${customer.customer_code})`,
+      copy.id
+    ]);
+
+    const invoiceNum = `INV-BUY-${Date.now().toString(36).toUpperCase()}`;
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    const [invRes] = await pool.query(
+      `INSERT INTO invoices (invoice_number, customer_id, invoice_date, due_date, subtotal, discount_amount, total_amount, paid_amount, balance_amount, status, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0.00, 'PAID', ?)`,
+      [
+        invoiceNum,
+        customerId,
+        todayStr,
+        todayStr,
+        price,
+        discountAmount,
+        finalAmount,
+        finalAmount,
+        notes || `Outright Book Purchase: ${book.title} (${copy.barcode})`
+      ]
+    );
+
+    const invoiceId = invRes.insertId;
+
+    await pool.query(
+      `INSERT INTO invoice_items (invoice_id, description, charge_type, quantity, unit_amount, total_amount)
+       VALUES (?, ?, 'PURCHASE', 1, ?, ?)`,
+      [invoiceId, `Book Purchase: ${book.title}`, price, finalAmount]
+    );
+
+    const payRef = `PAY-BUY-${Date.now().toString(36).toUpperCase()}`;
+    await pool.query(
+      `INSERT INTO payments (payment_reference, invoice_id, customer_id, received_by_user_id, amount, payment_method, transaction_note)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        payRef,
+        invoiceId,
+        customerId,
+        actorUserId,
+        finalAmount,
+        paymentMethod,
+        `Payment received for purchase of ${book.title}`
+      ]
+    );
+
+    await logAudit({
+      userId: actorUserId,
+      action: 'BOOK_PURCHASED',
+      entityType: 'INVOICE',
+      entityId: invoiceId,
+      details: { bookId, copyId: copy.id, finalAmount, customerId }
+    });
+
+    return {
+      success: true,
+      invoiceNumber: invoiceNum,
+      paymentReference: payRef,
+      bookTitle: book.title,
+      barcode: copy.barcode,
+      totalAmount: finalAmount,
+      discountAmount,
+      invoiceId
+    };
   }
 }

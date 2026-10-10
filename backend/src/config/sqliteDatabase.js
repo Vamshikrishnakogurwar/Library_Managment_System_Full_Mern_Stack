@@ -118,6 +118,7 @@ function initSqliteSchema(db) {
       category_id INTEGER,
       publication_year INTEGER,
       replacement_cost NUMERIC NOT NULL DEFAULT 500.00,
+      discount_percentage NUMERIC NOT NULL DEFAULT 0.00,
       description TEXT,
       cover_image_url TEXT,
       is_archived INTEGER NOT NULL DEFAULT 0,
@@ -274,6 +275,13 @@ function initSqliteSchema(db) {
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
   `);
+
+  // Auto-migrate column discount_percentage if existing database table was created prior
+  try {
+    db.prepare("ALTER TABLE books ADD COLUMN discount_percentage NUMERIC NOT NULL DEFAULT 0.00").run();
+  } catch (e) {
+    // Column already exists
+  }
 
   // Ensure default settings exist
   const settingsRow = db.prepare('SELECT id FROM library_settings WHERE id = 1').get();

@@ -16,6 +16,10 @@ export default {
           800: '#0c4a6e',
           900: '#082f49',
         }
+      },
+      fontFamily: {
+        sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['"Outfit"', 'sans-serif'],
       }
     },
   },
