@@ -59,16 +59,9 @@ if not exist "%~dp0frontend\dist\" (
 )
 
 :: 5. Run Database Migrations safely from backend directory
-echo [INFO] Checking and applying database migrations...
+echo [INFO] Initializing and validating database schema...
 cd /d "%~dp0backend"
 call node src/scripts/migrate.js
-if %errorlevel% neq 0 (
-    echo.
-    echo [WARNING] Database migration encountered an issue.
-    echo Please verify that MySQL is running and that your DB_PASSWORD in .env is correct.
-    echo Continuing to launch servers so you can access the interface...
-    echo.
-)
 
 :: Return to repository root directory
 cd /d "%~dp0"

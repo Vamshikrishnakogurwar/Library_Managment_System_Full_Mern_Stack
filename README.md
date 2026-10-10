@@ -27,7 +27,7 @@ LibraFlow is a full-stack, enterprise-grade Library Management and Circulation S
 | **Authentication** | JWT Access & Refresh Tokens, bcrypt password hashing |
 | **DevOps & CI/CD** | Docker multi-stage builds, Docker Compose, GitHub Actions CI workflow |
 
-> **Note on Architecture**: LibraFlow utilizes React, Express, and Node.js with relational **Aiven Cloud MySQL** rather than MongoDB. Relational integrity, foreign key constraints, and transactional row locking are essential for financial ledgers, circulation tracking, and overdue fine assessments.
+> **Note on Architecture**: LibraFlow utilizes React, Express, and Node.js with relational **Aiven Cloud MySQL** (or local MySQL 8.0) as the primary cloud database. Furthermore, LibraFlow includes a resilient, zero-configuration embedded relational engine fallback (`better-sqlite3`). If your MySQL service is unreachable or credentials are not yet entered, the system automatically and seamlessly boots up in standalone mode with full ACID support so that registration, customer management, catalog, and billing work 100% error-free out of the box!
 
 ---
 

@@ -16,3 +16,7 @@ scratch/
 certs/*.pem
 certs/*.crt
 certs/*.key
+backend/data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
